@@ -1,7 +1,9 @@
+from __future__ import annotations
 import asyncio
 import json
 import logging
 from dataclasses import dataclass
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +81,7 @@ def build_chess_prompt(
     color: str,
     user_strategy: str,
     board_ascii: str,
-    legal_moves: list[str]
+    legal_moves: List[str]
 ) -> str:
     """Build the prompt for asking Claude to make a chess move."""
     return f"""You are playing chess as {color}.

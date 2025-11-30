@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from models import GameStatus, Color
 
@@ -24,7 +26,7 @@ class MoveResponse(BaseModel):
     color: Color
     move_uci: str
     move_san: str
-    comment: str | None
+    comment: Optional[str]
     was_fallback: bool
     created_at: datetime
 
@@ -35,12 +37,12 @@ class MoveResponse(BaseModel):
 class GameResponse(BaseModel):
     game_code: str
     status: GameStatus
-    white_prompt: str | None
-    black_prompt: str | None
+    white_prompt: Optional[str]
+    black_prompt: Optional[str]
     board_fen: str
     current_turn: Color
-    result: str | None
-    moves: list[MoveResponse]
+    result: Optional[str]
+    moves: List[MoveResponse]
     created_at: datetime
 
     class Config:
@@ -54,7 +56,7 @@ class MoveEvent(BaseModel):
     color: Color
     move_uci: str
     move_san: str
-    comment: str | None
+    comment: Optional[str]
     was_fallback: bool
     board_fen: str
     board_ascii: str

@@ -1,6 +1,8 @@
+from __future__ import annotations
 import random
 import re
 import logging
+from typing import List, Tuple, Optional
 import chess
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -44,7 +46,7 @@ def parse_llm_response(response_text: str) -> tuple[str | None, str | None]:
     return move, comment
 
 
-def get_legal_moves_san(board: chess.Board) -> list[str]:
+def get_legal_moves_san(board: chess.Board) -> List[str]:
     """Get all legal moves in SAN notation."""
     return [board.san(move) for move in board.legal_moves]
 
