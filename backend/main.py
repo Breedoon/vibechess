@@ -167,11 +167,16 @@ async def get_game(game_code: str, db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/games/{game_code}/events")
-async def game_events(game_code: str, db: AsyncSession = Depends(get_db)):
+async def game_events(
+    game_code: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Server-Sent Events endpoint for real-time game updates.
 
     Subscribe to this endpoint to receive move events, game over events, etc.
+    If the game was paused (no viewers), this will resume it.
     """
     # Verify game exists
     result = await db.execute(select(Game).where(Game.game_code == game_code))
@@ -179,6 +184,20 @@ async def game_events(game_code: str, db: AsyncSession = Depends(get_db)):
 
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
+
+    # Resume paused game when viewer connects
+    if game.is_paused and game.status == GameStatus.IN_PROGRESS:
+        logger.info(f"Game {game_code}: Viewer connected, resuming paused game")
+        # Mark as not paused immediately to prevent duplicate restarts
+        game.is_paused = False
+        await db.commit()
+
+        # Restart the game loop
+        async def resume_game():
+            async with async_session() as session:
+                await run_game(game_code, session)
+
+        background_tasks.add_task(resume_game)
 
     async def event_generator():
         async for event in sse_manager.subscribe(game_code):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import random
 import re
 import logging
@@ -140,8 +141,9 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
     # Broadcast game started event
     await sse_manager.broadcast(game_code, GameStartedEvent())
 
-    # Update game status
+    # Update game status - mark as running (not paused)
     game.status = GameStatus.IN_PROGRESS
+    game.is_paused = False
     await db.commit()
 
     # Get current move number from existing moves
@@ -152,6 +154,13 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
     move_number = existing_moves // 2 + 1
 
     while not board.is_game_over():
+        # Exit if no viewers - mark as paused so it can be resumed later
+        if sse_manager.get_subscriber_count(game_code) == 0:
+            logger.info(f"Game {game_code}: No viewers connected, pausing game loop")
+            game.is_paused = True
+            await db.commit()
+            return  # Exit entirely - will be resumed when someone reconnects
+
         current_color = Color.WHITE if board.turn else Color.BLACK
         is_white = current_color == Color.WHITE
 

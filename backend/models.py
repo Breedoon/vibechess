@@ -35,6 +35,7 @@ class Game(Base):
     )
     current_turn: Mapped[Color] = mapped_column(Enum(Color), default=Color.WHITE)
     result: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    is_paused: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
