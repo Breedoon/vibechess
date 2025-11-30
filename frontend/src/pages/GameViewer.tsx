@@ -1,14 +1,62 @@
 import { useParams } from "react-router-dom";
 import { Chessboard } from "react-chessboard";
 import { useGameEvents, ChatMessage } from "@/hooks/useGameEvents";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Copy, Check, Loader2, Users } from "lucide-react";
+import { API_BASE_URL } from "@/config/api";
+import { useToast } from "@/hooks/use-toast";
+
+interface GameInfo {
+  game_code: string;
+  status: string;
+  white_prompt: string | null;
+  black_prompt: string | null;
+}
 
 const GameViewer = () => {
   const { gameCode } = useParams<{ gameCode: string }>();
   const { messages, gameState, isConnected } = useGameEvents(gameCode || "");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  // Fetch game info and check waiting status
+  useEffect(() => {
+    if (!gameCode) return;
+
+    const checkGameStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/games/${gameCode}`);
+        if (response.ok) {
+          const data: GameInfo = await response.json();
+          setGameInfo(data);
+          // Check if both prompts are submitted
+          const bothPromptsSubmitted = data.white_prompt !== null && data.black_prompt !== null;
+          setIsWaiting(!bothPromptsSubmitted);
+        }
+      } catch (error) {
+        console.error("Error checking game status:", error);
+      }
+    };
+
+    // Initial check
+    checkGameStatus();
+
+    // Poll while waiting for opponent
+    const interval = setInterval(() => {
+      if (isWaiting) {
+        checkGameStatus();
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [gameCode, isWaiting]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -20,9 +68,88 @@ const GameViewer = () => {
     return <div className="min-h-screen flex items-center justify-center">Game code not found</div>;
   }
 
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(gameCode);
+      setCopied(true);
+      toast({ title: "Copied!", description: "Game code copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const link = `${window.location.origin}/join/${gameCode}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: "Copied!", description: "Join link copied to clipboard" });
+    } catch {
+      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
+    }
+  };
+
+  const waitingForColor = gameInfo?.white_prompt === null ? "white" : "black";
+
+  // Show waiting state if opponent hasn't joined
+  if (isWaiting && gameInfo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Users className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold">Waiting for Opponent</h1>
+            <p className="text-muted-foreground">
+              Share the code below with your opponent to start the game
+            </p>
+          </div>
+
+          {/* Game Code */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Game Code</label>
+            <div className="flex gap-2">
+              <div className="flex-1 bg-secondary rounded-lg px-4 py-3 font-mono text-2xl tracking-wider text-center">
+                {gameCode}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopyCode}
+                className="h-auto aspect-square"
+              >
+                {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Join Link */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Or share this link</label>
+            <Button
+              variant="secondary"
+              className="w-full justify-start font-mono text-sm truncate"
+              onClick={handleCopyLink}
+            >
+              <Copy className="w-4 h-4 mr-2 flex-shrink-0" />
+              {window.location.origin}/join/{gameCode}
+            </Button>
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Waiting for {waitingForColor} player to join...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   const renderMessage = (msg: ChatMessage) => {
     const isWhite = msg.player === "white";
-    
+
     return (
       <div
         key={msg.id}
@@ -44,7 +171,7 @@ const GameViewer = () => {
               {msg.timestamp.toLocaleTimeString()}
             </span>
           </div>
-          
+
           <div className="flex items-start gap-2">
             {msg.type === "thinking" && <span>💭</span>}
             {msg.type === "action" && <span>♟️</span>}
