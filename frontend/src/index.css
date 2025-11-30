@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 160 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 18% 92%;
+    --secondary-foreground: 220 15% 15%;
+
+    --muted: 220 18% 92%;
+    --muted-foreground: 220 12% 45%;
+
+    --accent: 42 95% 55%;
+    --accent-foreground: 220 15% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 160 70% 45%;
+
+    --radius: 0.75rem;
+    
+    /* Chess theme colors */
+    --board-light: 42 40% 82%;
+    --board-dark: 160 18% 42%;
+    --gold: 42 95% 55%;
+    --gold-foreground: 220 15% 15%;
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 10% 92%;
+
+    --card: 220 22% 12%;
+    --card-foreground: 220 10% 92%;
+
+    --popover: 220 22% 12%;
+    --popover-foreground: 220 10% 92%;
+
+    --primary: 160 70% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 10% 92%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 42 95% 60%;
+    --accent-foreground: 220 25% 8%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 160 70% 50%;
+    
+    /* Chess theme colors */
+    --board-light: 42 35% 65%;
+    --board-dark: 160 15% 28%;
+    --gold: 42 95% 60%;
+    --gold-foreground: 220 25% 8%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
