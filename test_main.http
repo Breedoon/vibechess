@@ -1,11 +1,47 @@
-# Test your FastAPI endpoints
+# VibeChess API Tests
 
+### Health check
 GET http://127.0.0.1:8000/
 Accept: application/json
 
 ###
 
-GET http://127.0.0.1:8000/hello/User
+### Create a new game
+POST http://127.0.0.1:8000/games
 Accept: application/json
+
+###
+
+### Submit white prompt (replace GAME_CODE with actual code)
+POST http://127.0.0.1:8000/games/GAME_CODE/prompt
+Content-Type: application/json
+
+{
+  "color": "white",
+  "prompt": "Play aggressively, go for quick attacks and control the center"
+}
+
+###
+
+### Submit black prompt (replace GAME_CODE with actual code)
+POST http://127.0.0.1:8000/games/GAME_CODE/prompt
+Content-Type: application/json
+
+{
+  "color": "black",
+  "prompt": "Play defensively, protect the king and build a solid position"
+}
+
+###
+
+### Get game state (replace GAME_CODE with actual code)
+GET http://127.0.0.1:8000/games/GAME_CODE
+Accept: application/json
+
+###
+
+### Subscribe to game events (SSE) - replace GAME_CODE
+GET http://127.0.0.1:8000/games/GAME_CODE/events
+Accept: text/event-stream
 
 ###
