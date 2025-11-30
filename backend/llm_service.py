@@ -32,7 +32,7 @@ async def call_claude_cli(
     Returns:
         LLMResponse with the text response and session ID
     """
-    cmd = ["claude", "-p", prompt, "--output-format", "json"]
+    cmd = ["claude", "-p", prompt, "--output-format", "json", "--model", "haiku"]
 
     if session_id:
         cmd.extend(["--resume", session_id])
