@@ -60,6 +60,11 @@ class MoveEvent(BaseModel):
     was_fallback: bool
     board_fen: str
     board_ascii: str
+    # Commentary fields
+    commentary: Optional[str] = None
+    commentary_audio: Optional[str] = None  # Base64 encoded audio
+    my_emotion: Optional[str] = None
+    opponent_emotion: Optional[str] = None
 
 
 class GameOverEvent(BaseModel):

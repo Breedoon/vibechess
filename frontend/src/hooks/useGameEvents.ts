@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '@/config/api';
 
 export interface ChatMessage {
@@ -9,6 +9,11 @@ export interface ChatMessage {
   type: 'thinking' | 'action' | 'game_over';
   moveSan?: string;
   fen?: string;
+  // Commentary fields
+  commentary?: string;
+  commentaryAudio?: string;  // Base64 encoded audio
+  myEmotion?: string;
+  opponentEmotion?: string;
 }
 
 export interface GameState {
@@ -23,6 +28,7 @@ export function useGameEvents(gameCode: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch initial game state on mount
   useEffect(() => {
@@ -70,9 +76,38 @@ export function useGameEvents(gameCode: string) {
                 data.type === 'game_over' ? 'game_over' : 'thinking',
           moveSan: data.move_san,
           fen: data.fen,
+          // Commentary fields
+          commentary: data.commentary,
+          commentaryAudio: data.commentary_audio,
+          myEmotion: data.my_emotion,
+          opponentEmotion: data.opponent_emotion,
         };
 
         setMessages(prev => [...prev, newMessage]);
+
+        // Play commentary audio if available
+        if (data.commentary_audio) {
+          try {
+            // Stop any currently playing audio
+            if (currentAudioRef.current) {
+              currentAudioRef.current.pause();
+              currentAudioRef.current = null;
+            }
+
+            const audioData = `data:audio/mpeg;base64,${data.commentary_audio}`;
+            const audio = new Audio(audioData);
+            currentAudioRef.current = audio;
+
+            // Clear ref when audio finishes
+            audio.onended = () => {
+              currentAudioRef.current = null;
+            };
+
+            audio.play().catch(err => console.warn('Audio playback failed:', err));
+          } catch (err) {
+            console.warn('Failed to create audio:', err);
+          }
+        }
 
         // Fetch updated game state after move or game over
         if (data.type === 'move' || data.type === 'game_over') {

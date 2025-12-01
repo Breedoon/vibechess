@@ -12,7 +12,8 @@ from sqlalchemy.orm import selectinload
 from models import Game, Move, GameStatus, Color
 from schemas import MoveEvent, GameOverEvent, GameStartedEvent
 from sse_manager import sse_manager
-from llm_service import call_claude_cli, build_chess_prompt, build_system_prompt
+from llm_service import call_claude_cli, build_chess_prompt, build_system_prompt, parse_chess_response
+from commentary_service import commentary_service
 
 logger = logging.getLogger(__name__)
 
@@ -153,10 +154,24 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
     existing_moves = move_count_result.scalar() or 0
     move_number = existing_moves // 2 + 1
 
+    # Wait for at least one SSE subscriber to connect before starting
+    # Poll every 100ms for up to 10 seconds
+    max_wait = 100  # 10 seconds (100 * 100ms)
+    for _ in range(max_wait):
+        if sse_manager.get_subscriber_count(game_code) > 0:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        # No subscribers connected after 10 seconds - pause immediately
+        logger.info(f"Game {game_code}: No viewers connected after 10s wait, pausing game loop")
+        game.is_paused = True
+        await db.commit()
+        return
+
     while not board.is_game_over():
         # Exit if no viewers - mark as paused so it can be resumed later
         if sse_manager.get_subscriber_count(game_code) == 0:
-            logger.info(f"Game {game_code}: No viewers connected, pausing game loop")
+            logger.info(f"Game {game_code}: All viewers disconnected, pausing game loop")
             game.is_paused = True
             await db.commit()
             return  # Exit entirely - will be resumed when someone reconnects
@@ -191,8 +206,13 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
             else:
                 game.black_session_id = llm_response.session_id
 
-        # Parse LLM response
-        move_str, comment = parse_llm_response(llm_response.text)
+        # Parse LLM response using new parser
+        parsed = parse_chess_response(llm_response.text)
+        move_str = parsed.move
+        comment = parsed.comment
+        commentary = parsed.commentary
+        my_emotion = parsed.my_emotion
+        opponent_emotion = parsed.opponent_emotion
 
         # Validate move
         move = validate_and_get_move(board, move_str)
@@ -231,6 +251,11 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
         db.add(db_move)
         await db.commit()
 
+        # Generate commentary audio if available
+        commentary_audio = None
+        if commentary:
+            commentary_audio = await commentary_service.generate_audio(commentary)
+
         # Broadcast move event
         move_event = MoveEvent(
             move_number=move_number,
@@ -240,7 +265,11 @@ async def run_game(game_code: str, db: AsyncSession) -> None:
             comment=comment,
             was_fallback=was_fallback,
             board_fen=board.fen(),
-            board_ascii=str(board)
+            board_ascii=str(board),
+            commentary=commentary,
+            commentary_audio=commentary_audio,
+            my_emotion=my_emotion,
+            opponent_emotion=opponent_emotion
         )
         await sse_manager.broadcast(game_code, move_event)
 

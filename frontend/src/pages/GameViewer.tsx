@@ -4,11 +4,9 @@ import { useGameEvents, ChatMessage } from "@/hooks/useGameEvents";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Copy, Check, Loader2, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { API_BASE_URL } from "@/config/api";
-import { useToast } from "@/hooks/use-toast";
 
 interface GameInfo {
   game_code: string;
@@ -23,9 +21,6 @@ const GameViewer = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
   const [isWaiting, setIsWaiting] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
-
   // Fetch game info and check waiting status
   useEffect(() => {
     if (!gameCode) return;
@@ -68,28 +63,8 @@ const GameViewer = () => {
     return <div className="min-h-screen flex items-center justify-center">Game code not found</div>;
   }
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(gameCode);
-      setCopied(true);
-      toast({ title: "Copied!", description: "Game code copied to clipboard" });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
-    }
-  };
-
-  const handleCopyLink = async () => {
-    const link = `${window.location.origin}/join/${gameCode}`;
-    try {
-      await navigator.clipboard.writeText(link);
-      toast({ title: "Copied!", description: "Join link copied to clipboard" });
-    } catch {
-      toast({ title: "Error", description: "Failed to copy", variant: "destructive" });
-    }
-  };
-
   const waitingForColor = gameInfo?.white_prompt === null ? "white" : "black";
+  const joinLink = `${window.location.origin}/join/${gameCode}`;
 
   // Show waiting state if opponent hasn't joined
   if (isWaiting && gameInfo) {
@@ -109,32 +84,25 @@ const GameViewer = () => {
           {/* Game Code */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Game Code</label>
-            <div className="flex gap-2">
-              <div className="flex-1 bg-secondary rounded-lg px-4 py-3 font-mono text-2xl tracking-wider text-center">
-                {gameCode}
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopyCode}
-                className="h-auto aspect-square"
-              >
-                {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-              </Button>
-            </div>
+            <input
+              type="text"
+              readOnly
+              value={gameCode}
+              className="w-full bg-secondary rounded-lg px-4 py-3 font-mono text-2xl tracking-wider text-center select-all cursor-text"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
           </div>
 
           {/* Join Link */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Or share this link</label>
-            <Button
-              variant="secondary"
-              className="w-full justify-start font-mono text-sm truncate"
-              onClick={handleCopyLink}
-            >
-              <Copy className="w-4 h-4 mr-2 flex-shrink-0" />
-              {window.location.origin}/join/{gameCode}
-            </Button>
+            <input
+              type="text"
+              readOnly
+              value={joinLink}
+              className="w-full bg-secondary rounded-lg px-3 py-2 font-mono text-sm select-all cursor-text"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
           </div>
 
           {/* Status */}

@@ -2,10 +2,24 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
+
+# Valid emotion keys
+VALID_EMOTIONS = [
+    "grandmaster_trance",
+    "instant_regret",
+    "smug_trap_setter",
+    "bewildered_analyst",
+    "stone_wall",
+    "predator",
+    "resigned_king",
+    "impatient_speedster",
+    "eureka_moment"
+]
 
 
 @dataclass
@@ -14,6 +28,45 @@ class LLMResponse:
     text: str
     session_id: str | None
     error: str | None = None
+
+
+@dataclass
+class ChessMoveResponse:
+    """Parsed chess move response from LLM."""
+    move: str | None
+    comment: str | None
+    commentary: str | None
+    my_emotion: str | None
+    opponent_emotion: str | None
+
+
+def parse_chess_response(text: str) -> ChessMoveResponse:
+    """Parse the LLM response to extract all chess move fields."""
+    def extract_field(pattern: str, text: str) -> Optional[str]:
+        match = re.search(pattern, text, re.IGNORECASE)
+        return match.group(1).strip() if match else None
+
+    move = extract_field(r"MOVE:\s*(.+?)(?:\n|$)", text)
+    comment = extract_field(r"COMMENT:\s*(.+?)(?:\n(?:COMMENTARY|MY_EMOTION|OPPONENT_EMOTION):|$)", text)
+    commentary = extract_field(r"COMMENTARY:\s*(.+?)(?:\n(?:MY_EMOTION|OPPONENT_EMOTION):|$)", text)
+    my_emotion = extract_field(r"MY_EMOTION:\s*(\S+)", text)
+    opponent_emotion = extract_field(r"OPPONENT_EMOTION:\s*(\S+)", text)
+
+    # Validate emotions
+    if my_emotion and my_emotion not in VALID_EMOTIONS:
+        logger.warning(f"Invalid my_emotion: {my_emotion}, defaulting to stone_wall")
+        my_emotion = "stone_wall"
+    if opponent_emotion and opponent_emotion not in VALID_EMOTIONS:
+        logger.warning(f"Invalid opponent_emotion: {opponent_emotion}, defaulting to stone_wall")
+        opponent_emotion = "stone_wall"
+
+    return ChessMoveResponse(
+        move=move,
+        comment=comment,
+        commentary=commentary,
+        my_emotion=my_emotion,
+        opponent_emotion=opponent_emotion
+    )
 
 
 async def call_claude_cli(
@@ -92,9 +145,12 @@ Current board position:
 
 Legal moves available: {', '.join(legal_moves)}
 
-Respond with your move and brief reasoning in this exact format:
+Respond with your move in this exact format:
 MOVE: <move in SAN notation like e4, Nf3, O-O>
-COMMENT: <brief explanation of your reasoning>
+COMMENT: <your dramatic internal thoughts as the player, be expressive and in-character>
+COMMENTARY: <neutral sports announcer, 1-2 sentences, very dramatic like "Wow! White sacrifices the queen! Unbelievable!" - describe what happened without technical notation>
+MY_EMOTION: <one of: grandmaster_trance, instant_regret, smug_trap_setter, bewildered_analyst, stone_wall, predator, resigned_king, impatient_speedster, eureka_moment>
+OPPONENT_EMOTION: <same options - your guess of how your opponent is feeling>
 
 IMPORTANT: Your MOVE must be one of the legal moves listed above."""
 
@@ -107,9 +163,14 @@ Rules:
 1. Always respond with a legal move in SAN notation (e.g., e4, Nf3, Bxc6, O-O)
 2. Format your response as:
    MOVE: <your move>
-   COMMENT: <brief reasoning>
+   COMMENT: <your dramatic internal thoughts - be expressive!>
+   COMMENTARY: <neutral sports announcer style, 1-2 sentences, very dramatic>
+   MY_EMOTION: <one of the 9 emotion keys>
+   OPPONENT_EMOTION: <your guess of opponent's emotion>
 3. Play according to the strategy provided by your player
-4. Consider the opponent's possible responses
+4. Be dramatic and entertaining in your comments!
+
+Emotion options: grandmaster_trance, instant_regret, smug_trap_setter, bewildered_analyst, stone_wall, predator, resigned_king, impatient_speedster, eureka_moment
 
 You will receive the board as ASCII art where:
 - Uppercase letters = White pieces (K=King, Q=Queen, R=Rook, B=Bishop, N=Knight, P=Pawn)
